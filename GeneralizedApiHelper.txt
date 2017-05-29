@@ -1,0 +1,53 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using EPiServer.Logging.Compatibility;
+using Microsoft.Rest;
+using Newtonsoft.Json;
+
+namespace Jula.Store.Web.Business.Helpers
+{
+    public class GeneralizedApiHelper
+    {
+
+        private static readonly ILog Log = EPiServer.Logging.Compatibility.LogManager.GetLogger(typeof(GeneralizedApiHelper));
+
+        public static ApiCallResult<T> ExecuteEcomApiCall<T>(Func<T> func)
+        {
+            try
+            {
+                try
+                {
+                    var res = func();
+
+                    return new ApiCallResult<T> { Value = res, Valid = true };
+                }
+                catch (HttpOperationException exc)
+                {
+                    var m = JsonConvert.DeserializeObject<CustomException>(exc.Response.Content);
+                    Log.Error(exc.Message);
+                    return new ApiCallResult<T> { Value = default(T), Valid = false, Message = m.Message };
+                }
+                catch (Exception exc)
+                {
+                    Log.Error(exc.Message);
+                    return new ApiCallResult<T> { Value = default(T), Valid = false, Message = "Generic error message" };
+                }
+            }
+            catch (Exception exc)
+            {
+                Log.Error(exc.Message);
+                return new ApiCallResult<T> { Value = default(T), Valid = false, Message = "Generic error message" };
+            }
+        }
+
+        public class ApiCallResult<T>
+        {
+            public T Value { get; set; }
+            public bool Valid { get; set; }
+            public string Message { get; set; }
+        }
+
+    }
+}
